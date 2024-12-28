@@ -1,5 +1,6 @@
 # https://www.jetbrains.com/teamcity/
 require "danger/request_sources/github/github"
+require "danger/request_sources/forgejo/forgejo"
 require "danger/request_sources/gitlab"
 
 module Danger
@@ -83,6 +84,10 @@ module Danger
         ["GITHUB_PULL_REQUEST_ID", "GITHUB_REPO_URL"].all? { |x| env[x] && !env[x].empty? }
       end
 
+      def validates_as_forgejo_pr?(env)
+        ["FORGEJO_PULL_REQUEST_ID", "FORGEJO_REPO_URL"].all? { |x| env[x] && !env[x].empty? }
+      end
+
       def validates_as_gitlab_pr?(env)
         ["GITLAB_REPO_SLUG", "GITLAB_PULL_REQUEST_ID", "GITLAB_REPO_URL"].all? { |x| env[x] && !env[x].empty? }
       end
@@ -101,11 +106,17 @@ module Danger
     end
 
     def self.validates_as_pr?(env)
-      validates_as_github_pr?(env) || validates_as_gitlab_pr?(env) || validates_as_bitbucket_cloud_pr?(env) || validates_as_bitbucket_server_pr?(env)
+      validates_as_github_pr?(env) || validates_as_forgejo_pr?(env) || validates_as_gitlab_pr?(env) || validates_as_bitbucket_cloud_pr?(env) || validates_as_bitbucket_server_pr?(env)
     end
 
     def supported_request_sources
-      @supported_request_sources ||= [Danger::RequestSources::GitHub, Danger::RequestSources::GitLab, Danger::RequestSources::BitbucketCloud, Danger::RequestSources::BitbucketServer]
+      @supported_request_sources ||= [
+        Danger::RequestSources::GitHub,
+        Danger::RequestSources::Forgejo,
+        Danger::RequestSources::GitLab,
+        Danger::RequestSources::BitbucketCloud,
+        Danger::RequestSources::BitbucketServer
+      ]
     end
 
     def initialize(env)
@@ -114,6 +125,8 @@ module Danger
       # project or build configuration
       if self.class.validates_as_github_pr?(env)
         extract_github_variables!(env)
+      elsif self.class.validates_as_forgejo_pr?(env)
+        extract_forgejo_variables!(env)
       elsif self.class.validates_as_gitlab_pr?(env)
         extract_gitlab_variables!(env)
       elsif self.class.validates_as_bitbucket_cloud_pr?(env)
@@ -129,6 +142,12 @@ module Danger
       self.repo_slug       = env["GITHUB_REPO_SLUG"]
       self.pull_request_id = env["GITHUB_PULL_REQUEST_ID"].to_i
       self.repo_url        = env["GITHUB_REPO_URL"]
+    end
+
+    def extract_forgejo_variables!(env)
+      self.repo_slug       = env["FORGEJO_REPO_SLUG"]
+      self.pull_request_id = env["FORGEJO_PULL_REQUEST_ID"].to_i
+      self.repo_url        = env["FORGEJO_REPO_URL"]
     end
 
     def extract_gitlab_variables!(env)
