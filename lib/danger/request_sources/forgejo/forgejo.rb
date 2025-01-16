@@ -10,17 +10,22 @@ require "danger/request_sources/support/get_ignored_violation"
 module Danger
   module RequestSources
     class Forgejo < RequestSource
+      DANGER_FORGEJO_API_TOKEN = "DANGER_FORGEJO_API_TOKEN"
+      DANGER_FORGEJO_BEARER_TOKEN = "DANGER_FORGEJO_BEARER_TOKEN"
+      DANGER_FORGEJO_HOST = "DANGER_FORGEJO_HOST"
+      DANGER_FORGEJO_API_BASE_URL = "DANGER_FORGEJO_API_BASE_URL"
+      DANGER_OCTOKIT_VERIFY_SSL = "DANGER_OCTOKIT_VERIFY_SSL"
 
       include Danger::Helpers::CommentsHelper
 
       attr_accessor :pr_json, :issue_json, :use_local_git, :support_tokenless_auth, :dismiss_out_of_range_messages, :host, :api_url, :verify_ssl
 
       def self.env_vars
-        ["DANGER_FORGEJO_API_TOKEN", "DANGER_FORGEJO_BEARER_TOKEN"]
+        [DANGER_FORGEJO_API_TOKEN, DANGER_FORGEJO_BEARER_TOKEN]
       end
 
       def self.optional_env_vars
-        ["DANGER_FORGEJO_HOST", "DANGER_FORGEJO_API_BASE_URL", "DANGER_OCTOKIT_VERIFY_SSL"]
+        [DANGER_FORGEJO_HOST, DANGER_FORGEJO_API_BASE_URL, DANGER_OCTOKIT_VERIFY_SSL]
       end
 
       def initialize(ci_source, environment)
@@ -28,19 +33,14 @@ module Danger
         self.use_local_git = environment["DANGER_USE_LOCAL_GIT"]
         self.support_tokenless_auth = false
         self.dismiss_out_of_range_messages = false
-        self.host = environment.fetch("DANGER_FORGEJO_HOST", "forgejo.com")
-        # `DANGER_FORGEJO_API_HOST` is the old name kept for legacy reasons and
-        # backwards compatibility. `DANGER_FORGEJO_API_BASE_URL` is the new
-        # correctly named variable.
-        self.api_url = environment.fetch("DANGER_FORGEJO_API_HOST") do
-          environment.fetch("DANGER_FORGEJO_API_BASE_URL") do
-            "https://api.forgejo.com/".freeze
-          end
+        self.host = environment.fetch(DANGER_FORGEJO_HOST, "forgejo.com")
+        self.api_url = environment.fetch(DANGER_FORGEJO_API_BASE_URL) do
+          "https://api.forgejo.com/".freeze
         end
-        self.verify_ssl = environment["DANGER_OCTOKIT_VERIFY_SSL"] != "false"
+        self.verify_ssl = environment[DANGER_OCTOKIT_VERIFY_SSL] != "false"
 
-        @access_token = environment["DANGER_FORGEJO_API_TOKEN"]
-        @bearer_token = environment["DANGER_FORGEJO_BEARER_TOKEN"]
+        @access_token = environment[DANGER_FORGEJO_API_TOKEN]
+        @bearer_token = environment[DANGER_FORGEJO_BEARER_TOKEN]
       end
 
       def get_pr_from_branch(repo_name, branch_name, owner)
@@ -57,17 +57,17 @@ module Danger
       def validates_as_api_source?
         valid_bearer_token? || valid_access_token? || use_local_git
       end
-
       def scm
         @scm ||= GitRepo.new
       end
 
       def client
-        raise "No API token given, please provide one using `DANGER_FORGEJO_API_TOKEN` or `DANGER_FORGEJO_BEARER_TOKEN`" if !valid_access_token? && !valid_bearer_token? && !support_tokenless_auth
+        raise "No API token given, please provide one using `#{DANGER_FORGEJO_API_TOKEN}` or `#{DANGER_FORGEJO_BEARER_TOKEN}`" if !valid_access_token? && !valid_bearer_token? && !support_tokenless_auth
 
         @client ||= begin
                       Octokit.configure do |config|
                         config.connection_options[:ssl] = { verify: verify_ssl }
+                        config.api_endpoint = api_url
                       end
                       if valid_bearer_token?
                         Octokit::Client.new(bearer_token: @bearer_token, auto_paginate: true, api_endpoint: api_url)
@@ -137,17 +137,12 @@ module Danger
           raise "Repo moved or renamed, make sure to update the git remote".red
         end
 
-        fetch_issue_details(self.pr_json)
+        self.issue_json = client.issue(ci_source.repo_slug, ci_source.pull_request_id)
         self.ignored_violations = ignored_violations_from_pr
       end
 
       def ignored_violations_from_pr
         GetIgnoredViolation.new(self.pr_json["body"]).call
-      end
-
-      def fetch_issue_details(pr_json)
-        href = pr_json["_links"]["issue"]["href"]
-        self.issue_json = client.get(href)
       end
 
       def issue_comments
@@ -270,7 +265,7 @@ module Danger
       end
 
       def submit_inline_comments!(warnings: [], errors: [], messages: [], markdowns: [], previous_violations: [], danger_id: "danger")
-        pr_comments = client.pull_request_comments(ci_source.repo_slug, ci_source.pull_request_id)
+        pr_comments = client.issue_comments(ci_source.repo_slug, ci_source.pull_request_id)
         danger_comments = pr_comments.select { |comment| Comment.from_forgejo(comment).generated_by_danger?(danger_id) }
         non_danger_comments = pr_comments - danger_comments
 
@@ -313,7 +308,7 @@ module Danger
                 potential["commit_id"] == comment["commit_id"]
             end
 
-            client.delete_pull_request_comment(ci_source.repo_slug, comment["id"]) if replies.empty?
+            client.delete_comment(ci_source.repo_slug, comment["id"]) if replies.empty?
           end
         end
       end

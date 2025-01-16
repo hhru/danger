@@ -13,7 +13,8 @@ module Danger
         include Danger::Helpers::CommentsHelper
 
         # @see https://developer.forgejo.com/v3/pulls/reviews/ for all possible events
-        EVENT_APPROVE = "APPROVE".freeze
+        # When send APPROVE event, forgejo treats it as PENDING, so we need to use APPROVED
+        EVENT_APPROVE = "APPROVED".freeze
         EVENT_REQUEST_CHANGES = "REQUEST_CHANGES".freeze
         EVENT_COMMENT = "COMMENT".freeze
 

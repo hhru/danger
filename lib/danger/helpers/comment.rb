@@ -12,6 +12,10 @@ module Danger
       self.new(comment["id"], comment["body"])
     end
 
+    def self.from_forgejo(comment)
+      self.new(comment["id"], comment["body"])
+    end
+
     def self.from_gitlab(comment)
       if comment.respond_to?(:id) && comment.respond_to?(:body)
         type = comment.respond_to?(:type) ? comment.type : nil
