@@ -1,4 +1,5 @@
 require "danger/plugin_support/plugin"
+require "octokit/repository"
 
 module Danger
   # Handles interacting with GitHub inside a Dangerfile. Provides a few functions which wrap `pr_json` and also
@@ -248,6 +249,23 @@ module Danger
       elsif dismiss.kind_of?(FalseClass)
         @forgejo.dismiss_out_of_range_messages = false
       end
+    end
+
+    # Copied from Octokit to replaced put method, that is made for GitHub, to post method, that is made for Forgejo.
+    #
+    # Merge a pull request
+    #
+    # @see https://developer.github.com/v3/pulls/#merge-a-pull-request-merge-button
+    # @param repo [Integer, String, Hash, Repository] A GitHub repository
+    # @param number [Integer] Number of pull request
+    # @param merge_type [String] Can be [ merge, rebase, rebase-merge, squash, fast-forward-only, manually-merged ]
+    # @param commit_message [String] Optional commit message for the merge commit
+    # @return [Sawyer::Resource] Merge commit info if successful
+    def merge_pull_request(repo, number, merge_type = 'merge', commit_message = '', options = {})
+      api.post(
+        "#{Octokit::Repository.path repo}/pulls/#{number}/merge",
+        options.merge({ 'Do': merge_type, 'MergeMessageField': commit_message })
+      )
     end
 
     %i(title body author labels json).each do |suffix|
