@@ -1,5 +1,5 @@
 require "danger/plugin_support/plugin"
-require "octokit/repository"
+require "octokit"
 
 module Danger
   # Handles interacting with GitHub inside a Dangerfile. Provides a few functions which wrap `pr_json` and also
