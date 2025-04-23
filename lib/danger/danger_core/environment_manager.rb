@@ -45,6 +45,9 @@ module Danger
 
       raise_error_for_no_request_source(env, self.ui) unless self.request_source
       self.scm = self.request_source.scm
+      self.ui.puts "Using #{self.request_source.class} for request source".freeze
+      self.ui.puts "Using #{self.ci_source.class} for CI source".freeze
+      self.ui.puts "Using #{self.scm.class} for SCM".freeze
     end
 
     def pr?
