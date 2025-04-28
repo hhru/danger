@@ -57,6 +57,7 @@ module Danger
       def validates_as_api_source?
         valid_bearer_token? || valid_access_token? || use_local_git
       end
+
       def scm
         @scm ||= GitRepo.new
       end
@@ -453,7 +454,7 @@ module Danger
 
       # See the tests for examples of data coming in looks like
       def parse_message_from_row(row)
-        message_regexp = %r{(<(a |span data-)href="https://#{host}/#{ci_source.repo_slug}/blob/[0-9a-z]+/(?<file>[^#]+)#L(?<line>[0-9]+)"(>[^<]*</a> - |/>))?(?<message>.*?)}im
+        message_regexp = %r{(<(a |span data-)href="https://#{host}/#{ci_source.repo_slug}/src/commit/[0-9a-z]+/(?<file>[^#]+)#L(?<line>[0-9]+)"(>[^<]*</a> - |/>))?(?<message>.*?)}im
         match = message_regexp.match(row)
 
         if match[:line]
@@ -465,7 +466,7 @@ module Danger
       end
 
       def markdown_link_to_message(message, hide_link)
-        url = "https://#{host}/#{ci_source.repo_slug}/blob/#{pr_json['head']['sha']}/#{message.file}#L#{message.line}"
+        url = "https://#{host}/#{ci_source.repo_slug}/src/commit/#{pr_json['head']['sha']}/#{message.file}#L#{message.line}"
 
         if hide_link
           "<span data-href=\"#{url}\"/>"
