@@ -122,6 +122,10 @@ module Danger
         head_branch = self.pr_json["head"]["ref"]
         head_commit = self.pr_json["head"]["sha"]
 
+        puts "Forgejo: Setting up branches for Danger".yellow
+        puts "  > base: #{base_branch} (#{base_commit})"
+        puts "  > head: #{head_branch} (#{head_commit})"
+
         # Next, we want to ensure that we have a version of the current branch at a known location
         scm.ensure_commitish_exists_on_branch! base_branch, base_commit
         self.scm.exec "branch #{EnvironmentManager.danger_base_branch} #{base_commit}"

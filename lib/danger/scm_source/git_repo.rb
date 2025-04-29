@@ -93,7 +93,7 @@ module Danger
       return if success
 
       git_in_depth_fetch
-      raise_if_we_cannot_find_the_commit(commitish) if commit_not_exists?(commitish)
+      raise_if_we_cannot_find_the_commit(commitish, branch) if commit_not_exists?(commitish)
     end
 
     private
@@ -110,8 +110,15 @@ module Danger
       { "LANG" => "en_US.UTF-8" }
     end
 
-    def raise_if_we_cannot_find_the_commit(commitish)
-      raise "Commit #{commitish[0..7]} doesn't exist. Are you running `danger local/pr` against the correct repository? Also this usually happens when you rebase/reset and force-pushed."
+    def raise_if_we_cannot_find_the_commit(commitish, branch = nil)
+      message =
+        if branch
+          "Commit #{commitish[0..7]} doesn't exist on branch '#{branch}'."
+        else
+          "Commit #{commitish[0..7]} doesn't exist."
+        end
+      message += " Are you running `danger local/pr` against the correct repository? Also this usually happens when you rebase/reset and force-pushed."
+      raise message
     end
 
     def commit_exists?(sha1)
